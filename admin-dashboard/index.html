@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Copilot - Admin Dashboard</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">🤖</span>
+          <span class="logo-text">Chatbot Copilot</span>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="live-chats">
+          <span class="nav-icon">💬</span>
+          <span>Live Chats</span>
+          <span class="badge" id="live-chat-count">0</span>
+        </a>
+        <a href="#" class="nav-item" data-page="customers">
+          <span class="nav-icon">👥</span>
+          <span>Customers</span>
+        </a>
+        <a href="#" class="nav-item" data-page="analytics">
+          <span class="nav-icon">📈</span>
+          <span>Analytics</span>
+        </a>
+        <a href="#" class="nav-item" data-page="reports">
+          <span class="nav-icon">📋</span>
+          <span>Reports</span>
+        </a>
+        <a href="#" class="nav-item" data-page="menu-editor">
+          <span class="nav-icon">⚙️</span>
+          <span>Menu Editor</span>
+        </a>
+        <a href="#" class="nav-item" data-page="campaigns">
+          <span class="nav-icon">📢</span>
+          <span>Campaigns</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="business-status" id="business-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Loading...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <h1 class="page-title" id="page-title">Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <div class="notification-bell" id="notification-bell">
+            <span class="bell-icon">🔔</span>
+            <span class="notification-count" id="notification-count">0</span>
+          </div>
+          <div class="server-time" id="server-time"></div>
+        </div>
+      </header>
+
+      <!-- Content Pages -->
+      <div class="content">
+        <!-- Dashboard Page -->
+        <div class="page active" id="page-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">💬</div>
+              <div class="stat-info">
+                <div class="stat-value" id="stat-messages">-</div>
+                <div class="stat-label">Messages Today</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🤖</div>
+              <div class="stat-info">
+                <div class="stat-value" id="stat-ai-handled">-</div>
+                <div class="stat-label">AI Handled</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-info">
+                <div class="stat-value" id="stat-customers">-</div>
+                <div class="stat-label">Active Customers</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⚡</div>
+              <div class="stat-info">
+                <div class="stat-value" id="stat-confidence">-</div>
+                <div class="stat-label">AI Confidence</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Messages (Last 7 Days)</h3>
+              <canvas id="messages-chart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Top Intents</h3>
+              <canvas id="intents-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="recent-section">
+            <h3>Recent Activity</h3>
+            <div class="activity-list" id="activity-list"></div>
+          </div>
+        </div>
+
+        <!-- Live Chats Page -->
+        <div class="page" id="page-live-chats">
+          <div class="chats-container">
+            <div class="chat-list" id="chat-list">
+              <div class="empty-state">No active chats</div>
+            </div>
+            <div class="chat-window" id="chat-window">
+              <div class="chat-header" id="chat-header">
+                <span>Select a chat</span>
+              </div>
+              <div class="chat-messages" id="chat-messages"></div>
+              <div class="chat-input-area">
+                <div class="quick-replies" id="quick-replies"></div>
+                <div class="input-row">
+                  <textarea id="reply-input" placeholder="Type your reply..."></textarea>
+                  <button id="send-reply-btn" class="btn-primary">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customers Page -->
+        <div class="page" id="page-customers">
+          <div class="toolbar">
+            <input type="text" id="customer-search" placeholder="Search customers..." class="search-input">
+          </div>
+          <div class="customers-table" id="customers-table"></div>
+        </div>
+
+        <!-- Analytics Page -->
+        <div class="page" id="page-analytics">
+          <div class="analytics-grid">
+            <div class="chart-card full-width">
+              <h3>Daily Messages</h3>
+              <canvas id="daily-chart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Hourly Distribution</h3>
+              <canvas id="hourly-chart"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Trend Analysis</h3>
+              <div id="trends-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div class="page" id="page-reports">
+          <div class="reports-list" id="reports-list"></div>
+          <div class="report-detail" id="report-detail"></div>
+        </div>
+
+        <!-- Menu Editor Page -->
+        <div class="page" id="page-menu-editor">
+          <div class="toolbar">
+            <button id="add-menu-btn" class="btn-primary">+ Add Option</button>
+          </div>
+          <div class="menu-options-list" id="menu-options-list"></div>
+        </div>
+
+        <!-- Campaigns Page -->
+        <div class="page" id="page-campaigns">
+          <div class="campaigns-section">
+            <h3>Wake-up Campaigns</h3>
+            <div id="campaigns-list"></div>
+          </div>
+          <div class="inactive-customers-section">
+            <h3>Inactive Customers</h3>
+            <div id="inactive-customers"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title"></h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
