@@ -163,6 +163,21 @@ function createTables() {
     )
   `);
 
+  // Pending messages table (for test mode)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pending_messages (
+      id TEXT PRIMARY KEY,
+      recipient_id TEXT NOT NULL,
+      message TEXT NOT NULL,
+      source TEXT CHECK(source IN ('ai', 'staff', 'campaign', 'wakeup')) NOT NULL,
+      metadata TEXT,
+      status TEXT CHECK(status IN ('pending', 'approved', 'sent', 'rejected')) DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      approved_at DATETIME,
+      sent_at DATETIME
+    )
+  `);
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
@@ -170,6 +185,7 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_messages_intent ON messages(intent);
     CREATE INDEX IF NOT EXISTS idx_customers_last_contact ON customers(last_contact);
     CREATE INDEX IF NOT EXISTS idx_promotions_score ON promotions(promotion_score);
+    CREATE INDEX IF NOT EXISTS idx_pending_messages_status ON pending_messages(status);
   `);
 
   // Insert default menu options if empty

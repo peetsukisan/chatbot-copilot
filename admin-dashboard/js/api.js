@@ -84,7 +84,20 @@ const API = {
     }),
 
     // Settings
-    getSettings: () => API.request('/api/admin/settings')
+    getSettings: () => API.request('/api/admin/settings'),
+
+    // Pending Messages (Test Mode)
+    getPending: (status = 'pending') => API.request(`/api/pending?status=${status}`),
+    getPendingStats: () => API.request('/api/pending/stats'),
+    approvePending: (id) => API.request(`/api/pending/${id}/approve`, { method: 'POST' }),
+    rejectPending: (id) => API.request(`/api/pending/${id}/reject`, { method: 'POST' }),
+    sendPending: (id) => API.request(`/api/pending/${id}/send`, { method: 'POST' }),
+    sendAllPending: () => API.request('/api/pending/send-all', { method: 'POST' }),
+    getTestMode: () => API.request('/api/pending/test-mode'),
+    setTestMode: (enabled) => API.request('/api/pending/test-mode', {
+        method: 'POST',
+        body: JSON.stringify({ enabled })
+    })
 };
 
 // Config functions

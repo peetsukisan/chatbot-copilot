@@ -90,6 +90,7 @@ function navigateTo(page) {
     // Update title
     const titles = {
         'dashboard': 'Dashboard',
+        'pending': 'Pending Messages',
         'live-chats': 'Live Chats',
         'customers': 'Customers',
         'analytics': 'Analytics',
@@ -106,6 +107,7 @@ function navigateTo(page) {
 async function loadPageData(page) {
     switch (page) {
         case 'dashboard': loadDashboard(); break;
+        case 'pending': loadPending(); break;
         case 'live-chats': loadLiveChats(); break;
         case 'customers': loadCustomers(); break;
         case 'analytics': loadAnalytics(); break;
@@ -246,16 +248,31 @@ async function selectChat(senderId) {
     selectedChat = senderId;
     renderLiveChats();
 
+    // Update header
+    const chat = liveChats.find(c => c.senderId === senderId);
+    const header = document.getElementById('chat-header');
+    header.innerHTML = `<span>${chat?.customerInfo?.name || 'Customer'}</span>`;
+
+    // Show loading
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = '<div class="loading">Loading messages...</div>';
+
     try {
         const { data } = await API.getChatHistory(senderId);
-        renderChatMessages(data);
+
+        if (data && data.length > 0) {
+            renderChatMessages(data);
+        } else {
+            container.innerHTML = '<div class="empty-state">No messages yet</div>';
+        }
 
         // Load quick replies if available
-        const chat = liveChats.find(c => c.senderId === senderId);
         if (chat?.suggestedReplies) {
             renderQuickReplies(chat.suggestedReplies);
         }
     } catch (error) {
+        console.error('Failed to load chat history:', error);
+        container.innerHTML = '<div class="error-state">Failed to load messages. Check console for details.</div>';
         showToast('Failed to load chat history', 'error');
     }
 }
@@ -509,6 +526,109 @@ async function loadCampaigns() {
     document.getElementById('campaigns-list').innerHTML = '<p>Wake-up campaigns configuration coming soon...</p>';
 }
 
+// Pending Messages (Test Mode)
+async function loadPending() {
+    try {
+        const { data, stats, testMode } = await API.getPending();
+
+        // Update stats
+        document.getElementById('stat-pending').textContent = stats.pending || 0;
+        document.getElementById('stat-approved').textContent = stats.approved || 0;
+        document.getElementById('stat-sent').textContent = stats.sent || 0;
+        document.getElementById('pending-count').textContent = stats.pending || 0;
+
+        // Update test mode banner
+        const banner = document.getElementById('test-mode-banner');
+        const toggleBtn = document.getElementById('toggle-test-mode');
+        if (testMode) {
+            banner.classList.add('active');
+            toggleBtn.textContent = 'Disable Test Mode';
+        } else {
+            banner.classList.remove('active');
+            toggleBtn.textContent = 'Enable Test Mode';
+        }
+
+        // Render pending messages
+        const container = document.getElementById('pending-list');
+        if (data.length === 0) {
+            container.innerHTML = '<div class="empty-state">No pending messages</div>';
+            return;
+        }
+
+        container.innerHTML = data.map(msg => `
+            <div class="pending-card" data-id="${msg.id}">
+                <div class="pending-header">
+                    <span class="pending-recipient">${msg.customer_name || msg.recipient_id}</span>
+                    <span class="pending-source ${msg.source}">${msg.source}</span>
+                    <span class="pending-time">${formatTime(msg.created_at)}</span>
+                </div>
+                <div class="pending-message">${msg.message}</div>
+                <div class="pending-actions">
+                    <button class="btn-approve" onclick="approvePendingMsg('${msg.id}')">✓ Approve</button>
+                    <button class="btn-reject" onclick="rejectPendingMsg('${msg.id}')">✗ Reject</button>
+                    ${msg.status === 'approved' ?
+                `<button class="btn-send" onclick="sendPendingMsg('${msg.id}')">📤 Send Now</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Failed to load pending:', error);
+        showToast('Failed to load pending messages', 'error');
+    }
+}
+
+async function approvePendingMsg(id) {
+    try {
+        await API.approvePending(id);
+        showToast('Message approved', 'success');
+        loadPending();
+    } catch (error) {
+        showToast('Failed to approve message', 'error');
+    }
+}
+
+async function rejectPendingMsg(id) {
+    try {
+        await API.rejectPending(id);
+        showToast('Message rejected', 'success');
+        loadPending();
+    } catch (error) {
+        showToast('Failed to reject message', 'error');
+    }
+}
+
+async function sendPendingMsg(id) {
+    try {
+        await API.sendPending(id);
+        showToast('Message sent!', 'success');
+        loadPending();
+    } catch (error) {
+        showToast('Failed to send message', 'error');
+    }
+}
+
+async function sendAllApproved() {
+    try {
+        const result = await API.sendAllPending();
+        showToast(result.message, 'success');
+        loadPending();
+    } catch (error) {
+        showToast('Failed to send messages', 'error');
+    }
+}
+
+async function toggleTestMode() {
+    try {
+        const { testMode } = await API.getTestMode();
+        await API.setTestMode(!testMode);
+        showToast(`Test mode ${!testMode ? 'enabled' : 'disabled'}`, 'info');
+        loadPending();
+    } catch (error) {
+        showToast('Failed to toggle test mode', 'error');
+    }
+}
+
 // Event Listeners
 function initEventListeners() {
     // Send reply
@@ -534,6 +654,10 @@ function initEventListeners() {
             e.target.classList.remove('active');
         }
     });
+
+    // Pending page buttons
+    document.getElementById('toggle-test-mode')?.addEventListener('click', toggleTestMode);
+    document.getElementById('send-approved-btn')?.addEventListener('click', sendAllApproved);
 }
 
 // Utilities
@@ -607,8 +731,43 @@ function startClock() {
     setInterval(updateTime, 1000);
 }
 
-function loadLiveChats() {
-    renderLiveChats();
+async function loadLiveChats() {
+    try {
+        // Load existing chats from API if liveChats is empty
+        if (liveChats.length === 0) {
+            const { data } = await API.getChats({ limit: 50, since: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() });
+
+            // Group messages by sender
+            const chatsBySender = {};
+            data.forEach(msg => {
+                if (!chatsBySender[msg.sender_id]) {
+                    chatsBySender[msg.sender_id] = {
+                        senderId: msg.sender_id,
+                        messageText: msg.text,
+                        timestamp: msg.created_at,
+                        customerInfo: { name: msg.customer_name || 'Customer' }
+                    };
+                } else {
+                    // Update with most recent message
+                    if (new Date(msg.created_at) > new Date(chatsBySender[msg.sender_id].timestamp)) {
+                        chatsBySender[msg.sender_id].messageText = msg.text;
+                        chatsBySender[msg.sender_id].timestamp = msg.created_at;
+                    }
+                }
+            });
+
+            liveChats = Object.values(chatsBySender).sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+        }
+
+        renderLiveChats();
+        updateLiveChatCount();
+    } catch (error) {
+        console.error('Failed to load chats:', error);
+        showToast('Failed to load chats', 'error');
+        renderLiveChats();
+    }
 }
 
 function updateChatWithAI(data) {

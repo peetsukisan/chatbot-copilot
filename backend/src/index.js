@@ -10,6 +10,7 @@ const adminRoutes = require('./api/routes/admin');
 const customerRoutes = require('./api/routes/customer');
 const chatRoutes = require('./api/routes/chat');
 const reportRoutes = require('./api/routes/report');
+const pendingRoutes = require('./api/routes/pending');
 
 const { initDatabase } = require('./models/database');
 const { initVectorDB } = require('./services/vector/pinecone');
@@ -42,6 +43,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/pending', pendingRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -8,6 +8,9 @@ const config = {
     port: parseInt(process.env.PORT) || 3000,
     nodeEnv: process.env.NODE_ENV || 'development',
 
+    // Test Mode - When enabled, messages are queued but not sent
+    testMode: process.env.TEST_MODE === 'true' || true, // Default to test mode ON
+
     // Facebook
     facebook: {
         pageAccessToken: process.env.FB_PAGE_ACCESS_TOKEN,
@@ -17,12 +20,17 @@ const config = {
         graphApiUrl: 'https://graph.facebook.com'
     },
 
-    // Gemini AI - Multiple keys for rate limit handling
+    // Gemini AI - Multiple keys for rate limit handling (up to 8)
     gemini: {
         apiKeys: [
             process.env.GEMINI_API_KEY_1,
             process.env.GEMINI_API_KEY_2,
-            process.env.GEMINI_API_KEY_3
+            process.env.GEMINI_API_KEY_3,
+            process.env.GEMINI_API_KEY_4,
+            process.env.GEMINI_API_KEY_5,
+            process.env.GEMINI_API_KEY_6,
+            process.env.GEMINI_API_KEY_7,
+            process.env.GEMINI_API_KEY_8
         ].filter(Boolean),
         currentKeyIndex: 0,
         model: 'gemini-1.5-flash',

@@ -6,6 +6,7 @@
 const axios = require('axios');
 const config = require('../../utils/config');
 const logger = require('../../utils/logger');
+const { savePendingMessage } = require('../../models/pendingMessage');
 
 const GRAPH_API_URL = `${config.facebook.graphApiUrl}/${config.facebook.apiVersion}/me/messages`;
 
@@ -13,8 +14,18 @@ const GRAPH_API_URL = `${config.facebook.graphApiUrl}/${config.facebook.apiVersi
  * Send a text message
  * @param {string} recipientId - Facebook user ID
  * @param {string} text - Message text
+ * @param {string} source - Source of message (ai, staff, campaign, wakeup)
+ * @param {object} metadata - Additional metadata
  */
-async function sendMessage(recipientId, text) {
+async function sendMessage(recipientId, text, source = 'ai', metadata = {}) {
+    // Check test mode - queue message instead of sending
+    if (config.testMode) {
+        logger.info(`[TEST MODE] Message queued for ${recipientId}: ${text.substring(0, 50)}...`);
+        const pending = savePendingMessage(recipientId, text, source, metadata);
+        return { testMode: true, pending };
+    }
+
+    // Production mode - actually send
     try {
         const response = await axios.post(
             GRAPH_API_URL,
@@ -31,6 +42,31 @@ async function sendMessage(recipientId, text) {
         return response.data;
     } catch (error) {
         logger.error(`Failed to send message: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * Force send a message (bypasses test mode)
+ * Used when approving messages from pending queue
+ */
+async function forceSendMessage(recipientId, text) {
+    try {
+        const response = await axios.post(
+            GRAPH_API_URL,
+            {
+                recipient: { id: recipientId },
+                message: { text }
+            },
+            {
+                params: { access_token: config.facebook.pageAccessToken }
+            }
+        );
+
+        logger.debug(`Message force-sent to ${recipientId}: ${text.substring(0, 50)}...`);
+        return response.data;
+    } catch (error) {
+        logger.error(`Failed to force send message: ${error.message}`);
         throw error;
     }
 }
@@ -169,6 +205,7 @@ async function markSeen(recipientId) {
 
 module.exports = {
     sendMessage,
+    forceSendMessage,
     sendQuickReplies,
     sendButtonTemplate,
     sendTypingIndicator,
