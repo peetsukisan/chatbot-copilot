@@ -34,8 +34,26 @@ async function processMessage(senderId, messageText, options = {}) {
             }
         }
 
-        // Detect intent (Feature #1)
-        const intent = await detectIntent(messageText);
+        // Detect intent (Feature #1) - with safety check
+        let intent;
+        try {
+            intent = await detectIntent(messageText);
+        } catch (e) {
+            logger.warn(`Intent detection failed: ${e.message}, using default`);
+            intent = null;
+        }
+
+        // Ensure intent has a valid structure
+        if (!intent || !intent.intent) {
+            intent = {
+                intent: 'GENERAL_INQUIRY',
+                confidence: 0.3,
+                keywords: [],
+                suggestedDepartment: 'ทั่วไป',
+                summary: messageText
+            };
+        }
+
         logger.debug(`Detected intent: ${intent.intent} (${intent.confidence})`);
 
         // Get relevant context from vector DB
