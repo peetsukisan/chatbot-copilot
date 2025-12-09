@@ -20,7 +20,7 @@ function initVision() {
         throw new Error('No Gemini API key configured');
     }
     genAI = new GoogleGenerativeAI(apiKey);
-    visionModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    visionModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     logger.info('Gemini Vision initialized');
 }
 

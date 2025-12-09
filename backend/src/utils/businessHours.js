@@ -3,17 +3,27 @@
  * Checks if current time is within business hours (10:00-22:00 daily)
  */
 
-const { format, parse, isWithinInterval, setHours, setMinutes } = require('date-fns');
-const { toZonedTime } = require('date-fns-tz');
 const config = require('./config');
+
+/**
+ * Get current time in Bangkok timezone
+ * Using simple offset calculation to avoid date-fns-tz issues
+ */
+function getBangkokTime() {
+    const now = new Date();
+    // Bangkok is UTC+7
+    const bangkokOffset = 7 * 60; // minutes
+    const localOffset = now.getTimezoneOffset(); // minutes (negative for positive offsets)
+    const bangkokTime = new Date(now.getTime() + (bangkokOffset + localOffset) * 60 * 1000);
+    return bangkokTime;
+}
 
 /**
  * Check if current time is within business hours
  * @returns {boolean} true if within business hours
  */
 function isBusinessHours() {
-    const timezone = config.businessHours.timezone;
-    const now = toZonedTime(new Date(), timezone);
+    const now = getBangkokTime();
 
     const [startHour, startMin] = config.businessHours.start.split(':').map(Number);
     const [endHour, endMin] = config.businessHours.end.split(':').map(Number);
@@ -56,8 +66,7 @@ function getBusinessStatus() {
  * @returns {object} Minutes until next state change
  */
 function getTimeUntilChange() {
-    const timezone = config.businessHours.timezone;
-    const now = toZonedTime(new Date(), timezone);
+    const now = getBangkokTime();
 
     const [startHour, startMin] = config.businessHours.start.split(':').map(Number);
     const [endHour, endMin] = config.businessHours.end.split(':').map(Number);
