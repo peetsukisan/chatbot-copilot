@@ -114,28 +114,41 @@ async function detectIntent(message) {
   "summary": "สรุปสั้นๆ ว่าลูกค้าต้องการอะไร"
 }`;
 
-    return executeWithRetry(async () => {
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
+    try {
+        return await executeWithRetry(async () => {
+            const result = await model.generateContent(prompt);
+            const text = result.response.text();
 
-        // Extract JSON from response
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            try {
-                return JSON.parse(jsonMatch[0]);
-            } catch (e) {
-                logger.warn('Failed to parse intent JSON, using default');
+            // Extract JSON from response
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    return JSON.parse(jsonMatch[0]);
+                } catch (e) {
+                    logger.warn('Failed to parse intent JSON, using default');
+                }
             }
-        }
 
+            return {
+                intent: 'OTHER',
+                confidence: 0.5,
+                keywords: [],
+                suggestedDepartment: 'ทั่วไป',
+                summary: message
+            };
+        });
+    } catch (error) {
+        // All keys exhausted or other error - return default intent
+        logger.warn(`Intent detection failed: ${error.message}, using default`);
         return {
-            intent: 'OTHER',
-            confidence: 0.5,
+            intent: 'GENERAL_INQUIRY',
+            confidence: 0.3,
             keywords: [],
             suggestedDepartment: 'ทั่วไป',
-            summary: message
+            summary: message,
+            error: true
         };
-    });
+    }
 }
 
 /**

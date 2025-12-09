@@ -33,7 +33,7 @@ const config = {
             process.env.GEMINI_API_KEY_8
         ].filter(Boolean),
         currentKeyIndex: 0,
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash-lite',
         embeddingModel: 'text-embedding-004'
     },
 
