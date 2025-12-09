@@ -125,7 +125,7 @@ async function handleMessage(senderId, message, io) {
 
     logger.info(`Received message from ${senderId}: ${messageText}`);
 
-    // Emit to admin dashboard in real-time
+    // Emit to admin dashboard in real-time (always, even in learning mode)
     io.to('admin-room').emit('new-message', {
         senderId,
         messageText,
@@ -133,7 +133,27 @@ async function handleMessage(senderId, message, io) {
         timestamp: new Date().toISOString()
     });
 
-    // Check business hours
+    // LEARNING MODE: Only collect data, do NOT respond to customers
+    if (config.learningMode) {
+        logger.info(`[LEARNING MODE] Message logged but NOT responding to ${senderId}`);
+
+        // Still save the message for analysis
+        const { saveMessage } = require('../../models/chat');
+        const { getOrCreateCustomer } = require('../../models/customer');
+
+        await getOrCreateCustomer(senderId);
+        await saveMessage({
+            senderId,
+            text: messageText,
+            sender: 'customer',
+            intent: 'UNKNOWN',
+            intentConfidence: 0
+        });
+
+        return; // Do not respond
+    }
+
+    // Check business hours (only when NOT in learning mode)
     const businessStatus = getBusinessStatus();
 
     if (businessStatus.isOpen) {
@@ -149,7 +169,22 @@ async function handleMessage(senderId, message, io) {
 async function handleImageMessage(senderId, imageUrl, io) {
     logger.info(`Received image from ${senderId}`);
 
-    // Acknowledge receipt
+    // LEARNING MODE: Only log, do NOT respond
+    if (config.learningMode) {
+        logger.info(`[LEARNING MODE] Image received but NOT processing for ${senderId}`);
+
+        // Emit to admin dashboard
+        io.to('admin-room').emit('image-received', {
+            senderId,
+            imageUrl,
+            learningMode: true,
+            timestamp: new Date().toISOString()
+        });
+
+        return; // Do not respond or analyze
+    }
+
+    // Acknowledge receipt (only when NOT in learning mode)
     await sendMessage(senderId, 'ได้รับรูปภาพแล้วครับ กำลังวิเคราะห์...');
 
     try {

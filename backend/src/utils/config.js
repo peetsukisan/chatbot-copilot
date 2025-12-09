@@ -8,6 +8,10 @@ const config = {
     port: parseInt(process.env.PORT) || 3000,
     nodeEnv: process.env.NODE_ENV || 'development',
 
+    // Learning Mode - When enabled, system ONLY collects data, no customer responses
+    // Set to false when ready to start responding to customers
+    learningMode: process.env.LEARNING_MODE !== 'false', // Default: ON (true)
+
     // Test Mode - When enabled, messages are queued but not sent
     testMode: process.env.TEST_MODE === 'true' || true, // Default to test mode ON
 
